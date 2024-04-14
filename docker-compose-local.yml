@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    user: postgres
+    ports:
+      - '6676:5432'
+    networks:
+      - my_network
+    volumes:
+      - db:/var/lib/postgresql/data
+    restart: unless-stopped
+    environment:
+      TZ: 'Europe/Moscow'
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+  app:
+    container_name: django_app
+    networks:
+      - my_network
+    ports:
+      - '8000:8000'
+    build: .
+    volumes:
+      - django:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: unless-stopped
+
+volumes:
+  db:
+    driver: local
+  django:
+    driver: local
+
+networks:
+  my_network:
+    driver: bridge
